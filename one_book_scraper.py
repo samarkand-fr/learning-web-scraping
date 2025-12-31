@@ -13,10 +13,11 @@ def extract_book_data(url):
     # On vérifie si la requête a réussi (code 200)
     if response.status_code != 200:
         print(f"Erreur : Impossible de charger la page (Code d'erreur : {response.status_code})")
-    else:
+        return {}   # return an empty dictionary
+
     # Page chargée avec succès. Début du 'parsing' (analyse du HTML).
     # BeautifulSoup transforme le texte brut HTML en un objet structuré facile à manipuler
-        soup = BeautifulSoup(response.content, 'html.parser')
+    soup = BeautifulSoup(response.content, 'html.parser')
 
     # Extraction des données
     product_page_url = url
@@ -120,6 +121,5 @@ if __name__ == "__main__":
     book_extracted = extract_book_data(url_cible)
     # Vérification si les données ont été extraites avec succès
     if book_extracted:
-        save_to_csv(book_extracted, "book_data.csv")
-
-print("Phase 1 terminée : book_data.csv créé avec succès.")
+        save_to_csv(book_extracted, "one_book_data.csv")
+        print("Phase 1 terminée : book_data.csv créé avec succès.")

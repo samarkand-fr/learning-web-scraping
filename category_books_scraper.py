@@ -16,35 +16,35 @@ def get_books_urls_from_category(category_url):
     # on continue tant qu'il y a une URL courante
     while current_url:
         response = requests.get(current_url)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            # ======Extraction des liens sur la page actuelle ====== 
-            # Sur une page catégorie, chaque livre est dans une balise <article class='product_pod'>
-            book_tags = soup.find_all('article', class_='product_pod')
-            print(f"=== {len(book_tags)} livres identifiés sur page {page_count } ===")
-            # On parcourt chaque livre pour extraire son lien
-            for tag in book_tags:
-                # On récupère le lien 'href' dans le titre <h3> du livre
-                link = tag.find('h3').find('a').get('href')
-                # On construit l'URL complète du livre
-                full_url = "http://books.toscrape.com/catalogue/" + link.replace("../", "")
-                books_urls.append(full_url)
+        if response.status_code != 200:
+            print(f"Erreur : Impossible de charger la page (Code {response.status_code})")
+            return books_urls  # return liste actuelle des URLs and il va arreter la boucle avec une safe exit  
+            
+        # Page chargée avec succès
+        soup = BeautifulSoup(response.content, 'html.parser')
+        # ======Extraction des liens sur la page actuelle ====== 
+        # Sur une page catégorie, chaque livre est dans une balise <article class='product_pod'>
+        book_tags = soup.find_all('article', class_='product_pod')
+        print(f"=== {len(book_tags)} livres identifiés sur page {page_count } ===")
+        # On parcourt chaque livre pour extraire son lien
+        for tag in book_tags:
+            # On récupère le lien 'href' dans le titre <h3> du livre
+            link = tag.find('h3').find('a').get('href')
+            # On construit l'URL complète du livre
+            full_url = "http://books.toscrape.com/catalogue/" + link.replace("../", "")
+            books_urls.append(full_url)
 
-            # === Gestion de la pagination (bouton 'Next') ===
-            # On cherche si une balise <li> avec la classe 'next' existe
-            next_button = soup.find('li', class_='next')
-            if next_button:
-                next_link = next_button.find('a').get('href')
-#               # On met à jour l'URL courante pour la prochaine boucle
-                current_url = urljoin(current_url, next_link)
-                page_count += 1
-                print(f"Page suivante trouvée. Passage à la page {page_count}")
-            else:
-                break  # Sortie immédiate car il n'y a plus de page suivante
+        # === Gestion de la pagination (bouton 'Next') ===
+        # On cherche si une balise <li> avec la classe 'next' existe
+        next_button = soup.find('li', class_='next')
+        if next_button:
+            next_link = next_button.find('a').get('href')
+            # On met à jour l'URL courante pour la prochaine boucle
+            current_url = urljoin(current_url, next_link)
+            page_count += 1
+            print(f"Page suivante trouvée. Passage à la page {page_count}")
         else:
-            # Si le status_code n'est pas 200 (ex: 404)
-            print(f"Echec du chargement de la page {page_count}")
-            break  # On arrête tout si le site ne répond pas
+            break  # Sortie immédiate car il n'y a plus de page suivante
             
     return books_urls
 
@@ -86,6 +86,4 @@ if __name__ == "__main__":
         category_name = category_books[0]['category'].lower().replace(' ', '_')
         # On définit le nom du fichier CSV
         save_category_to_csv(category_books, f"category_{category_name}.csv")
-
-
-print(f"Phase 2 terminée : category_{category_name}.csv créé avec succès.")
+        print(f"Phase 2 terminée : category_{category_name}.csv créé avec succès.")
