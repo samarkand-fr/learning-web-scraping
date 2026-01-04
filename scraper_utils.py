@@ -6,9 +6,9 @@ from urllib.parse import urljoin
 
 def extract_book_data(url):
     """
-    Cette fonction prend l'URL d'une page produit(book choisie) et extrait toutes les informations nécessaires.
+    Extrait les données détaillées d'un livre depuis sa page produit.
+    Retourne un dictionnaire contenant les attributs du livre.
     """
-    
     # On envoie une requête GET pour récupérer le contenu de la page
     response = requests.get(url)
     # On vérifie si la requête a réussi (code 200)
@@ -17,44 +17,62 @@ def extract_book_data(url):
         return {}   # return an empty dictionary
 
     # Page chargée avec succès. Début du 'parsing' (analyse du HTML).
-    # BeautifulSoup transforme le texte brut HTML en un objet structuré facile à manipuler
     soup = BeautifulSoup(response.content, 'html.parser')
-
+    
     # Extraction des données
     product_page_url = url
 
-    # Titre du livre
-    # On cherche la balise <h1> qui contient le titre du livre
-    title = soup.find("h1").text.strip()
+    # Extraction du titre
+    title_tag = soup.find('h1')
+    # Utilisation d'une valeur par défaut si le titre n'est pas trouvé
+    title = title_tag.text.strip() if title_tag else "N/A"
     print(f"Titre du livre trouvé : '{title}'")
 
-    # Prix du livre
-    #  Le tableau 'Product Information' contient l'UPC, les prix et le stock
-    # On cherche la balise <table> avec la classe 'table-striped'
+    # Extraction du tableau d'informations produit (UPC, prix, disponibilité)
     table = soup.find('table', class_='table-striped')
-    rows = table.find_all('tr')  # On récupère toutes les lignes (tr = table row)
+    rows = table.find_all('tr') if table else []
+    
+    # Valeurs par défaut pour éviter toute erreur si une donnée est absente
+    upc = "N/A"
+    price_excl_tax = "N/A"
+    price_incl_tax = "N/A"
+    number_available = "N/A"
+    # Plutôt que de dépendre de la position des lignes dans le tableau, j’identifie chaque donnée à partir de son libellé.(plus robuste,plus maintenable)
+    # Parcours de chaque ligne du tableau d'informations produit
+    for row in rows:
+        # Récupération des balises <th> (libellé) et <td> (valeur)
+        th = row.find("th")
+        td = row.find("td")
+        # Si l'une des balises est absente, on passe à la ligne suivante
+        if not th or not td:
+            continue
+        # Nettoyage du texte extrait
+        header = th.text.strip()
+        value = td.text.strip()
+        # Association du libellé à la bonne variable
+        match header:
+            case "UPC":
+                upc = value
+            case "Price (excl. tax)":
+                price_excl_tax = value
+            case "Price (incl. tax)":
+                price_incl_tax = value
+            case "Availability":
+                number_available = value
+            case _:
+                pass # Les autres champs du tableau ne nous intéressent pas
 
-    # Dans ce tableau, chaque donnée est dans une ligne spécifique :
-    upc = rows[0].find('td').text.strip()             # 1ère ligne : UPC
-    price_excl_tax = rows[2].find('td').text.strip()  # 3ème ligne : Prix Hors Taxe
-    price_incl_tax = rows[3].find('td').text.strip()  # 4ème ligne : Prix TTC
-    # 6ème ligne : Nombre de livres disponibles in stock
-    number_available = rows[5].find("td").text.strip()
-    print(f" UPC: {upc},\n Prix HT: {price_excl_tax},\n Prix TTC: {price_incl_tax},\n Disponibilité: {number_available}")
-
-    # Description du livre
+    # Extraction de la description du livre
     description_tag = soup.find('div', id='product_description')
     if description_tag:
         # find_next('p') cherche la première balise <p> après celle-ci
         product_description = description_tag.find_next('p').text
-        print(f"Description du livre : {product_description}")
+        #print(f"Description du livre : {product_description}")
     else:
         product_description = "Pas de description disponible."
 
-    # Catégorie du livre
-    # On la trouve dans le 'breadcrumb' (fil d'ariane) en haut de page
+    # Extraction de la catégorie via le fil d'Ariane (breadcrumb)
     breadcrumb = soup.find('ul', class_='breadcrumb')
-    links = breadcrumb.find_all('a')
     # Les liens sont : Home -> Books -> [Nom de la Catégorie] 
     # Vérifie si le breadcrumb existe
     if breadcrumb:
@@ -68,24 +86,34 @@ def extract_book_data(url):
         category = "Inconnue"  # Valeur par défaut si breadcrumb absent
     print(f" Catégorie : {category}")
 
-    # Évaluation du livre (Review Rating)
-    # Elle est définie par une classe CSS "star-rating Three"
-    rating_tag = soup.find('p', class_='star-rating')
-    rating_classes = rating_tag.get('class') # Retourne une liste : ['star-rating', 'Three']
-    review_rating = rating_classes[1] # On prend le 2ème élément qui indique l'évaluation
-    # Évaluation (Review Rating)
-    print(f" Review Rating : {review_rating} étoiles")
 
-    #IMAGE URL
-    # On cherche l'image principale dans le conteneur 'item active'
-    image_tag = soup.find('div', class_='item active').find('img')
-    image_src = image_tag.get('src')
-    # L'URL est relative (ex: ../../media/...), on la transforme en URL complète
-    image_url = f"http://books.toscrape.com/{image_src.replace('../../', '')}"
-    print(f" URL de l'image : {image_url}")
-    # On retourne toutes les données sous forme de dictionnaire (clé: valeur)
+    # Extraction de la note (rating) via la classe CSS
+    # Retourne une liste : ['star-rating', 'Three']
+    rating_tag = soup.find('p', class_='star-rating')
+    if rating_tag:
+        # extrais la valeur correspondant au nombre d’étoiles
+        review_rating = rating_tag.get("class")[1]
+    else:
+        # Valeur par défaut si l'évaluation n'est pas trouvée
+        review_rating = "Zero"
+
+
+    # Recherche du conteneur HTML qui contient l'image du produit
+    image_tag = soup.find('div', class_='item active')
+    # Valeur par défaut si l'image n'est pas trouvée
+    image_url = ""
+    # Vérification de la présence du conteneur et de la balise <img> avant d’essayer d’accéder à son attribut.
+    # Cette vérification empêche toute exception liée à un HTML incomplet.
+    if image_tag and image_tag.find('img'):
+        # Récupération du chemin relatif de l'image
+        image_src = image_tag.find('img').get('src')
+
+        # Construction de l'URL complète de l'image
+        image_url = urljoin(url, image_src)
+
+
     return {
-        "product_page_url": product_page_url,
+        "product_page_url": url,
         "universal_product_code": upc,
         "title": title,
         "price_including_tax": price_incl_tax,
