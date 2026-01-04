@@ -4,6 +4,10 @@ import csv
 import os
 from urllib.parse import urljoin
 
+BASE_URL = "http://books.toscrape.com/"
+DEFAULT_BOOK_URL = "https://books.toscrape.com/catalogue/wuthering-heights_307/index.html"
+DEFAULT_CATEGORY_URL = "https://books.toscrape.com/catalogue/category/books/food-and-drink_33/index.html"
+
 def extract_book_data(url):
     """
     Extrait les données détaillées d'un livre depuis sa page produit.
@@ -37,7 +41,7 @@ def extract_book_data(url):
     price_excl_tax = "N/A"
     price_incl_tax = "N/A"
     number_available = "N/A"
-    # Plutôt que de dépendre de la position des lignes dans le tableau, j’identifie chaque donnée à partir de son libellé.(plus robuste,plus maintenable)
+
     # Parcours de chaque ligne du tableau d'informations produit
     for row in rows:
         # Récupération des balises <th> (libellé) et <td> (valeur)
@@ -127,13 +131,14 @@ def extract_book_data(url):
 
 def get_books_urls_from_category(category_url):
     """
-    Parcourt toutes les pages d'une catégorie et récupère les liens de chaque livre.
+    Parcourt toutes les pages d'une catégorie et récupère les URLs de chaque livre.
+    Gère la pagination en cherchant le bouton 'Next'.
     """
     books_urls = []
     current_url = category_url
     page_count = 1  # Initialisation du compteur
-
-    # ==== BOUCLE DE PARSING DES PAGES DE LA CATÉGORIE ====
+    
+# ==== BOUCLE DE PARSING DES PAGES DE LA CATÉGORIE ====
     # on continue tant qu'il y a une URL courante
     while current_url:
         response = requests.get(current_url)
@@ -151,9 +156,7 @@ def get_books_urls_from_category(category_url):
         for tag in book_tags:
             # On récupère le lien 'href' dans le titre <h3> du livre
             link = tag.find('h3').find('a').get('href')
-            # On construit l'URL complète du livre
-            full_url = "http://books.toscrape.com/catalogue/" + link.replace("../", "")
-            books_urls.append(full_url)
+            books_urls.append(urljoin(current_url, link))
 
         # === Gestion de la pagination (bouton 'Next') ===
         # On cherche si une balise <li> avec la classe 'next' existe
@@ -171,7 +174,7 @@ def get_books_urls_from_category(category_url):
 
 def get_all_categories_links(base_url):
     """
-    Récupère la liste de toutes les catégories du site depuis la barre latérale.
+    Récupère les liens de toutes les catégories depuis la barre latérale du site.
     """
     categories = []
     # Requête vers la page d'accueil
@@ -191,10 +194,10 @@ def get_all_categories_links(base_url):
     for link in links:
         category_name = link.text.strip()
         category_link = urljoin(base_url, link.get('href'))
-        categories.append({"name": category_name, "url": category_link})
-        print(f" {len(categories)} catégories trouvées au total.")
-
+        categories.append({"name": category_name,
+                            "url": category_link})
     return categories
+
 
 def save_to_csv(data_list, filename):
     """
@@ -223,5 +226,45 @@ def save_to_csv(data_list, filename):
         writer.writeheader() # Écrit la ligne d'en-tête
         writer.writerows(data_list) # Écrit toutes les lignes de données
 
+def download_image(image_url, category_name, upc):
+    """
+      Télécharge une image produit et l'enregistre dans 'scraped_data/images' 
+    dans un dossier spécifique par catégorie.
+    Utilise l'UPC comme nom de fichier pour garantir l'unicité.
+    """
+    # Si l'URL de l'image est vide ou invalide, on arrête immédiatement
+    if not image_url:
+        return False
 
+    # Création du dossier de la catégorie (format propre)
+    folder_name = category_name.lower().replace(" ", "_")
+    dir_path = os.path.join("scraped_data", "images", folder_name)
 
+    # Création du dossier s'il n'existe pas
+    os.makedirs(dir_path, exist_ok=True)
+
+    # Chemin complet du fichier image
+    file_path = os.path.join(dir_path, f"{upc}.jpg")
+
+    # Si l'image existe déjà, on considère l'opération réussie
+    if os.path.exists(file_path):
+        return True
+
+    try:
+        # Téléchargement de l'image
+        response = requests.get(image_url, stream=True)
+
+        # Vérification du succès de la requête
+        if response.status_code != 200:
+            return False
+
+        # Écriture du fichier image par morceaux
+        with open(file_path, "wb") as f:
+            for chunk in response.iter_content(1024):
+                f.write(chunk)
+        # Téléchargement réussi
+        return True
+
+    except:
+        # Erreur réseau 
+        return False

@@ -2,9 +2,10 @@ from scraper_utils import (
     extract_book_data, 
     get_books_urls_from_category, 
     get_all_categories_links, 
+    download_image,
     save_to_csv, 
 )
-
+import os
 # Configuration des cibles par défaut
 DEFAULT_BOOK_URL = "http://books.toscrape.com/catalogue/wuthering-heights_307/index.html"
 DEFAULT_CATEGORY_URL = "https://books.toscrape.com/catalogue/category/books/food-and-drink_33/index.html"
@@ -60,6 +61,29 @@ def phase_3():
             save_to_csv(results, filename)
             print(f"\n  Fini ! Données sauvegardées dans {filename}")
 
+def run_phase4():
+    """Phase 4 : Téléchargement de TOUTES les images du site uniquement."""
+    print("\n--- Phase 4 : Téléchargement de toutes les images du site ---")
+    images_dir = os.path.join("scraped_data", "images")
+    if not os.path.exists(images_dir):
+        os.makedirs(images_dir)
+
+    categories = get_all_categories_links(BASE_URL)
+    print(f"{len(categories)} catégories trouvées.")
+    
+    for category in categories:
+        print(f"\nTéléchargement images : {category['name']}...")
+        book_urls = get_books_urls_from_category(category['url'])
+        
+        for i, url in enumerate(book_urls, 1):
+            print(f"  [{i}/{len(book_urls)}] Téléchargement...", end="\r")
+            data = extract_book_data(url)
+            if data:
+                download_image(data['image_url'], data['category'], data['universal_product_code'])
+        print(f"\n  Images terminées pour {category['name']}")
+
+
+
 def main():
     # Extraction des noms pour l'affichage dynamique
     book_name = DEFAULT_BOOK_URL.split('/')[-2].replace('-', ' ').title()
@@ -70,6 +94,7 @@ def main():
         print(f"1. Phase 1 : Extraire le livre '{book_name}'")
         print(f"2. Phase 2 : Extraire la catégorie '{category_name}'")
         print(f"3. Phase 3 : Extraire tout le site (Toutes les catégories)")
+        print(f"4. Phase 4 : Télécharger toutes les images du site")
         print("q. Quitter")
         
         choice = input("\nChoisissez une option : ").strip().lower()
@@ -80,6 +105,8 @@ def main():
             phase_2(DEFAULT_CATEGORY_URL)
         elif choice == '3':
             phase_3()
+        elif choice == '4':
+            run_phase4()
         elif choice == 'q':
             print("no more scraping =====!")
             break
