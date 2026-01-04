@@ -1,9 +1,17 @@
-from scraper_utils import extract_book_data, get_books_urls_from_category, get_all_categories_links, save_to_csv, download_image
+from scraper_utils import (
+        extract_book_data, 
+        get_books_urls_from_category, 
+        get_all_categories_links, 
+        save_to_csv, 
+        download_image,
+        BASE_URL
+    )
 import os
 
-BASE_URL = "http://books.toscrape.com/"
+
 def run_phase4():
     """Phase 4 : Téléchargement de TOUTES les images du site uniquement."""
+    
     print("\n--- Phase 4 : Téléchargement de toutes les images du site ---")
     images_dir = os.path.join("scraped_data", "images")
     if not os.path.exists(images_dir):

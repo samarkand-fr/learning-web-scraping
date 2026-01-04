@@ -1,17 +1,16 @@
-from scraper_utils import extract_book_data, save_to_csv
+from scraper_utils import (
+        extract_book_data,
+        save_to_csv,
+        DEFAULT_BOOK_URL
+    )
 
-def run_phase1():
-    """
-    Phase 1 : Extrait les données d'une seule page produit et les enregistre dans book.csv.
-    """
-    url = "http://books.toscrape.com/catalogue/wuthering-heights_307/index.html"
+def run_phase1(url=DEFAULT_BOOK_URL):
+    """Phase 1 : Extraction d'un seul livre."""
     
-    # Extraction des données 
+    print(f"\n--- Phase 1 : Extraction d'un seul livre ---")
+    print(f"Cible: {url}")
     data = extract_book_data(url)
-    
-    # Sauvegarde si l'extraction a réussi
     if data:
         save_to_csv([data], "book.csv")
-
-if __name__ == "__main__":
-    run_phase1()
+        print(f"Succès ! Livre '{data['title']}' sauvegardé dans book.csv")
+    return data

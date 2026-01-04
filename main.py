@@ -1,110 +1,37 @@
-from scraper_utils import (
-    extract_book_data, 
-    get_books_urls_from_category, 
-    get_all_categories_links, 
-    download_image,
-    save_to_csv, 
-)
 import os
-# Configuration des cibles par défaut
-DEFAULT_BOOK_URL = "http://books.toscrape.com/catalogue/wuthering-heights_307/index.html"
-DEFAULT_CATEGORY_URL = "https://books.toscrape.com/catalogue/category/books/food-and-drink_33/index.html"
-BASE_URL = "http://books.toscrape.com/"
-
-def phase_1(url=DEFAULT_BOOK_URL):
-    print("\n--- Phase 1 : Extraction d'un seul livre ---")
-    print(f"Cible : {url}")
-    data = extract_book_data(url)
-    if data:
-        save_to_csv([data], "book.csv")
-        print(f"Succès ! Livre '{data['title']}' sauvegardé dans book.csv")
-
-def phase_2(url=DEFAULT_CATEGORY_URL):
-    print("\n--- Phase 2 : Extraction d'une catégorie ---")
-    print(f"Cible : {url}")
-    book_urls = get_books_urls_from_category(url)
-    print(f"{len(book_urls)} livres trouvés. Extraction en cours...")
-    
-    results = []
-    for i, book_url in enumerate(book_urls, 1):
-        print(f"  [{i}/{len(book_urls)}] Scriping...", end="\r")
-        data = extract_book_data(book_url)
-        if data:
-            results.append(data)
-    
-    if results:
-        category_name = results[0]['category'].lower().replace(' ', '_')
-        save_to_csv(results, f"{category_name}.csv")
-        print(f"\nTerminé ! Données sauvegardées dans {category_name}.csv")
-
-def phase_3():
-    mode = "Phase 4" if download_images else "Phase 3"
-    print(f"\n--- {mode} : Extraction de tout le site ---")
-    
-   
-    categories = get_all_categories_links(BASE_URL)
-    print(f"{len(categories)} catégories trouvées.")
-    
-    for category in categories:
-        print(f"\nTraitement de la catégorie : {category['name']}...")
-        book_urls = get_books_urls_from_category(category['url'])
-        
-        results = []
-        for i, url in enumerate(book_urls, 1):
-            print(f"  [{i}/{len(book_urls)}] Extraction livre...", end="\r")
-            data = extract_book_data(url)
-            if data:
-                results.append(data)
-        
-        if results:
-            filename = f"{category['name'].lower().replace(' ', '_')}.csv"
-            save_to_csv(results, filename)
-            print(f"\n  Fini ! Données sauvegardées dans {filename}")
-
-def run_phase4():
-    """Phase 4 : Téléchargement de TOUTES les images du site uniquement."""
-    print("\n--- Phase 4 : Téléchargement de toutes les images du site ---")
-    images_dir = os.path.join("scraped_data", "images")
-    if not os.path.exists(images_dir):
-        os.makedirs(images_dir)
-
-    categories = get_all_categories_links(BASE_URL)
-    print(f"{len(categories)} catégories trouvées.")
-    
-    for category in categories:
-        print(f"\nTéléchargement images : {category['name']}...")
-        book_urls = get_books_urls_from_category(category['url'])
-        
-        for i, url in enumerate(book_urls, 1):
-            print(f"  [{i}/{len(book_urls)}] Téléchargement...", end="\r")
-            data = extract_book_data(url)
-            if data:
-                download_image(data['image_url'], data['category'], data['universal_product_code'])
-        print(f"\n  Images terminées pour {category['name']}")
-
-
+import sys
+from scraper_utils import (
+    get_all_categories_links, 
+    DEFAULT_BOOK_URL,
+    DEFAULT_CATEGORY_URL,
+    BASE_URL
+)
+from one_book_scraper import run_phase1
+from category_books_scraper import run_phase2
+from all_categories_scraper import run_phase3
+from scraper_images import run_phase4
 
 def main():
     # Extraction des noms pour l'affichage dynamique
     book_name = DEFAULT_BOOK_URL.split('/')[-2].replace('-', ' ').title()
-    category_name = DEFAULT_CATEGORY_URL.split('/')[-2].split('_')[0].title()
+    cat_name = DEFAULT_CATEGORY_URL.split('/')[-2].split('_')[0].title()
 
     while True:
         print("\n=== Système de surveillance des prix Books Online ===")
         print(f"1. Phase 1 : Extraire le livre '{book_name}'")
-        print(f"2. Phase 2 : Extraire la catégorie '{category_name}'")
-        print(f"3. Phase 3 : Extraire tout le site (Toutes les catégories)")
-        print(f"4. Phase 4 : Télécharger toutes les images du site")
+        print(f"2. Phase 2 : Extraire la catégorie '{cat_name}'")
+        print(f"3. Phase 3 : Extraire TOUTES les catégories (CSV uniquement)")
+        print(f"4. Phase 4 : Télécharger TOUTES les images")
         print("q. Quitter")
         
         choice = input("\nChoisissez une option : ").strip().lower()
         
         if choice == '1':
-            phase_1(DEFAULT_BOOK_URL)
+            run_phase1(DEFAULT_BOOK_URL)
         elif choice == '2':
-            phase_2(DEFAULT_CATEGORY_URL)
+            run_phase2(DEFAULT_CATEGORY_URL)
         elif choice == '3':
-            phase_3()
+            run_phase3()
         elif choice == '4':
             run_phase4()
         elif choice == 'q':
