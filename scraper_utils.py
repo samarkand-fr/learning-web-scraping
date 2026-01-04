@@ -171,18 +171,29 @@ def get_all_categories_links(base_url):
 def save_to_csv(data_list, filename):
     """
     Sauvegarde une liste de dictionnaires de données dans un fichier CSV.
+    Les fichiers sont enregistrés dans 'scraped_data/csv'.
     """
-    if not data_list: return
-    """
-        Préparation des en-têtes (colonnes)
-      data_list[0] : On regarde le premier livre de la liste.
-      list(data_list[0].keys()) : On récupère les clés (les noms des colonnes).
-    """
+    if not data_list:
+        print(f"Annulation : Aucune donnée à écrire pour {filename}.")
+        return
+    
+    # Chemin vers le dossier CSV
+    csv_dir = os.path.join("scraped_data", "csv")
+    
+    # Création du dossier s'il n'existe pas
+    if not os.path.exists(csv_dir):
+        os.makedirs(csv_dir)
+        
+    # Chemin complet du fichier
+    file_path = os.path.join(csv_dir, filename)
+    
+    # Récupération des clés (les noms des colonnes) depuis le premier livre de la liste
     headers = list(data_list[0].keys())
-    with open(filename, 'w', newline='', encoding='utf-8') as file:
-        writer = csv.DictWriter(file, fieldnames=headers)
-        writer.writeheader()
-        writer.writerows(data_list)
+    
+    with open(file_path, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=headers)
+        writer.writeheader() # Écrit la ligne d'en-tête
+        writer.writerows(data_list) # Écrit toutes les lignes de données
 
 
 
