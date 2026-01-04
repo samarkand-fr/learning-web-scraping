@@ -1,6 +1,7 @@
 .venv/
 venv/
-__pycache__/
 *.csv
 images/
+scraped_data/
+__pycache__/
 .DS_Store
