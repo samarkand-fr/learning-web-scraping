@@ -4,14 +4,15 @@ import csv
 import os
 from urllib.parse import urljoin
 
+# --- Configuration des cibles et URLs par défaut ---
 BASE_URL = "http://books.toscrape.com/"
 DEFAULT_BOOK_URL = "https://books.toscrape.com/catalogue/wuthering-heights_307/index.html"
 DEFAULT_CATEGORY_URL = "https://books.toscrape.com/catalogue/category/books/food-and-drink_33/index.html"
 
 def extract_book_data(url):
     """
-    Extrait les données détaillées d'un livre depuis sa page produit.
-    Retourne un dictionnaire contenant les attributs du livre.
+    Extrait toutes les informations nécessaires d'une page produit d'un livre.
+    Prend en entrée l'URL du livre et retourne un dictionnaire de données.
     """
     # On envoie une requête GET pour récupérer le contenu de la page
     response = requests.get(url)
@@ -42,6 +43,7 @@ def extract_book_data(url):
     price_incl_tax = "N/A"
     number_available = "N/A"
 
+    # Informations techniques (UPC, Prix, Stock) situées dans un tableau
     # Parcours de chaque ligne du tableau d'informations produit
     for row in rows:
         # Récupération des balises <th> (libellé) et <td> (valeur)
@@ -112,10 +114,10 @@ def extract_book_data(url):
         # Récupération du chemin relatif de l'image
         image_src = image_tag.find('img').get('src')
 
-        # Construction de l'URL complète de l'image
+        # Construction de l'URL complète de l'image(URL absolue)
         image_url = urljoin(url, image_src)
 
-
+    # Regroupement de toutes les données extraites
     return {
         "product_page_url": url,
         "universal_product_code": upc,
@@ -131,8 +133,8 @@ def extract_book_data(url):
 
 def get_books_urls_from_category(category_url):
     """
-    Parcourt toutes les pages d'une catégorie et récupère les URLs de chaque livre.
-    Gère la pagination en cherchant le bouton 'Next'.
+    Récupère la liste de TOUTES les URLs de livres d'une catégorie donnée.
+    Gère automatiquement la pagination (bouton 'Next') s'il y a plusieurs pages.
     """
     books_urls = []
     current_url = category_url
@@ -156,6 +158,7 @@ def get_books_urls_from_category(category_url):
         for tag in book_tags:
             # On récupère le lien 'href' dans le titre <h3> du livre
             link = tag.find('h3').find('a').get('href')
+            # Transformation du lien relatif en lien absolu
             books_urls.append(urljoin(current_url, link))
 
         # === Gestion de la pagination (bouton 'Next') ===
@@ -174,7 +177,8 @@ def get_books_urls_from_category(category_url):
 
 def get_all_categories_links(base_url):
     """
-    Récupère les liens de toutes les catégories depuis la barre latérale du site.
+    Récupère la liste de toutes les catégories du site et leurs URLs.
+    S'appuie sur la navigation latérale de la page d'accueil.
     """
     categories = []
     # Requête vers la page d'accueil
@@ -186,7 +190,7 @@ def get_all_categories_links(base_url):
         
     # Parse HTML de la page d'accueil
     soup = BeautifulSoup(response.content, 'html.parser')
-    # On cherche le conteneur des catégories dans la barre de navigation à gauche qui est dans une <ul class='nav-list'>
+    # Localisation de la liste des catégories dans le menu latéral qui est dans une <ul class='nav-list'>
     nav_list = soup.find('ul', class_='nav-list').find('ul')
     # On récupère tous les liens de catégories
     links = nav_list.find_all('a')
@@ -201,8 +205,8 @@ def get_all_categories_links(base_url):
 
 def save_to_csv(data_list, filename):
     """
-    Sauvegarde une liste de dictionnaires de données dans un fichier CSV.
-    Les fichiers sont enregistrés dans 'scraped_data/csv'.
+    Enregistre une liste de données (dictionnaires) dans un fichier CSV.
+    Les fichiers sont stockés dans le dossier 'scraped_data/csv'.
     """
     if not data_list:
         print(f"Annulation : Aucune donnée à écrire pour {filename}.")
@@ -220,7 +224,8 @@ def save_to_csv(data_list, filename):
     
     # Récupération des clés (les noms des colonnes) depuis le premier livre de la liste
     headers = list(data_list[0].keys())
-    
+
+    # Écriture physique du fichier
     with open(file_path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader() # Écrit la ligne d'en-tête
@@ -228,15 +233,14 @@ def save_to_csv(data_list, filename):
 
 def download_image(image_url, category_name, upc):
     """
-      Télécharge une image produit et l'enregistre dans 'scraped_data/images' 
-    dans un dossier spécifique par catégorie.
-    Utilise l'UPC comme nom de fichier pour garantir l'unicité.
+    Télécharge une image et la stocke dans 'scraped_data/images/[nom_categorie]'.
+    Nomme le fichier avec l'UPC du livre pour éviter les doublons.
     """
     # Si l'URL de l'image est vide ou invalide, on arrête immédiatement
     if not image_url:
         return False
 
-    # Création du dossier de la catégorie (format propre)
+    # Création du chemin de dossier (un dossier par catégorie)
     folder_name = category_name.lower().replace(" ", "_")
     dir_path = os.path.join("scraped_data", "images", folder_name)
 
@@ -246,12 +250,12 @@ def download_image(image_url, category_name, upc):
     # Chemin complet du fichier image
     file_path = os.path.join(dir_path, f"{upc}.jpg")
 
-    # Si l'image existe déjà, on considère l'opération réussie
+    # Optimisation : si l'image existe déjà, on ne la télécharge pas à nouveau
     if os.path.exists(file_path):
         return True
 
     try:
-        # Téléchargement de l'image
+        # Téléchargement en mode 'stream' pour gérer efficacement les fichiers médias
         response = requests.get(image_url, stream=True)
 
         # Vérification du succès de la requête
