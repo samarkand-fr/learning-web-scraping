@@ -4,7 +4,8 @@ Ce projet est un outil de web scraping développé en Python pour extraire des d
 
 ## Architecture du Projet
 
-Le projet suit le principe **DRY (Don't Repeat Yourself)** avec une architecture modulaire et décentralisée :avec une orchestration centrale assurée par main.py et une centralisation des fonctions communes dans scraper_utils.py.
+Le projet est modulaire, avec une orchestration centrale assurée par main.py.
+Les responsabilités sont séparées par phase, et les fonctions communes sont mutualisées dans un module utilitaire afin de respecter le principe DRY "Don't Repeat Yourself".
 
 - **`main.py`** : Le point d'entrée principal. Il propose un menu interactif pour lancer les différentes phases.
 - **`scraper_utils.py`** : Contient toute la logique technique (extraction, pagination, sauvegarde CSV, téléchargement d'images) et les constantes globales.
