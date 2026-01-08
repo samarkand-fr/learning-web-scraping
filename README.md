@@ -9,7 +9,7 @@ Les responsabilités sont séparées par phase, et les fonctions communes sont m
 
 - **`main.py`** : Le point d'entrée principal. Il propose un menu interactif pour lancer les différentes phases.
 - **`scraper_utils.py`** : Contient toute la logique technique (extraction, pagination, sauvegarde CSV, téléchargement d'images) et les constantes globales.
-- **`phase1.py` à `phase4.py`** :  Scripts indépendants contenant la logique propre à chaque phase et qui utilisent les fonctions de `scraper_utils.py`.
+- **`one_book_scraper.py` ,`category_books_scraper.py`,`all_categories_scraper.py` `scraper_images.py`** :  Scripts indépendants contenant la logique propre à chaque phase et qui utilisent les fonctions de `scraper_utils.py`.
 
 ## Installation
 
