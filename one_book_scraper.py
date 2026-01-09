@@ -20,5 +20,5 @@ def run_phase1(url=DEFAULT_BOOK_URL):
     #Sauvegarde si l'extraction a réussi
     if data:
         save_to_csv([data], "book.csv")
-        print(f"\n--- Fin de la Phase 2 : {len(results)} livres extraits pour {category_name} ---")
+        print(f"Succès ! Livre '{data['title']}' sauvegardé dans book.csv")
     return data
